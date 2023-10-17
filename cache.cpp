@@ -5,10 +5,13 @@
 #include <string>
 #include <vector>
 
+// Constructor
 cache::cache(int associativity, int num_rows, int block_size)
     : associativity(associativity), block_size(block_size), rows(num_rows)
 {
     std::for_each(this->rows.begin(), this->rows.end(),
+                  /* Lambda to call for each cache row. Captures the value of associativity as a variable to use in the
+                  construction of the inner class.*/
                   [associativity](cache_row row) { row = cache_row(associativity); });
 }
 

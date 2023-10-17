@@ -1,6 +1,7 @@
 #ifndef CACHE_ROW_H
 #define CACHE_ROW_H
 #include <cstddef>
+#include <deque>
 #include <map>
 #include <string>
 #include <vector>
@@ -21,8 +22,8 @@ class cache_row
     // The number of blocks in each cache row.
     int associativity;
 
-    // Currently removing the first element.
-    std::map<std::string, cache_block>::iterator index_to_remove;
+    // Keep a deque for storing all the most recently used values.
+    std::deque<std::string> recent_used_values;
 
     /* Hash Map that maps the tag to a vector of n bytes where n is the offset for each block.
      Since we are using a map a valid bit is not needed. */
@@ -45,6 +46,9 @@ class cache_row
     cache_block& get_block(std::string tag);
 
     // Replace a block in the cache
-    void replace(std::string tag);
+    void replace(std::string tag, cache_block data);
+
+    // Add a new block to the with the tag as the key.
+    void add_block(std::string tag, cache_block data);
 };
 #endif
