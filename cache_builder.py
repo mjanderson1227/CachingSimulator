@@ -1,12 +1,4 @@
 import math
-from dataclasses import dataclass
-
-@dataclass
-class Data:
-    tag: int
-    block: int
-    index: int
-    associativity: int
 
 # CacheBuilder will be passed into the constructor of the Cache class to get the desired values.
 class CacheBuilder:
