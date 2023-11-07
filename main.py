@@ -29,4 +29,4 @@ cache_builder = CacheBuilder(
         args.physical_memory)
 
 # Print the cache information.
-cache_builder.print_info()
+print(cache_builder)
