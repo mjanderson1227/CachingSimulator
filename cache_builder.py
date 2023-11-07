@@ -32,18 +32,20 @@ class CacheBuilder:
         self.total_size = self.overhead + self.cache_size
 
     # Print info about the cache that will be built using this class.
-    def print_info(self):
-        print(f'Trace File(s): {", ".join(self.trace_files)}\n')
-        print('***** Cache Input Parameters *****')
-        print(f'Cache Size: {int(self.cache_size / 1024):>26} KB')
-        print(f'Block Size: {self.block_size:>25} Bytes')
-        print(f'Associativity: {self.associativity:>21}')
-        print(f'Replacement Policy: {self.replacement_policy:>17}\n')
-        print('***** Cache Calculated Values *****\n')
-        print(f'Total # Blocks: {self.number_blocks:>24}')
-        print(f'Tag Size: {self.tag_bits:>27} bits')
-        print(f'Index Size: {self.index_bits:>25} bits')
-        print(f'Total # Rows: {self.number_rows:>25}')
-        print(f'Overhead Size: {self.overhead:>25} bytes')
-        print(f'Implementation Memory Size: {self.total_size / 1024:>13.2f} KB ({self.total_size} bytes)')
-        print(f'Cost: {f"${round(self.total_size / 1024 * 0.09, 2):.2f} @ ($0.09 / KB)":>50}')
+    def __repr__(self) -> str:
+        str_list = []
+        str_list.append(f'Trace File(s): {", ".join(self.trace_files)}\n')
+        str_list.append('***** Cache Input Parameters *****')
+        str_list.append(f'Cache Size: {int(self.cache_size / 1024):>26} KB')
+        str_list.append(f'Block Size: {self.block_size:>25} Bytes')
+        str_list.append(f'Associativity: {self.associativity:>21}')
+        str_list.append(f'Replacement Policy: {self.replacement_policy:>17}\n')
+        str_list.append('***** Cache Calculated Values *****\n')
+        str_list.append(f'Total # Blocks: {self.number_blocks:>24}')
+        str_list.append(f'Tag Size: {self.tag_bits:>27} bits')
+        str_list.append(f'Index Size: {self.index_bits:>25} bits')
+        str_list.append(f'Total # Rows: {self.number_rows:>25}')
+        str_list.append(f'Overhead Size: {self.overhead:>25} bytes')
+        str_list.append(f'Implementation Memory Size: {self.total_size / 1024:>13.2f} KB ({self.total_size} bytes)')
+        str_list.append(f'Cost: {f"${round(self.total_size / 1024 * 0.09, 2):.2f} @ ($0.09 / KB)":>50}')
+        return '\n'.join(str_list)
