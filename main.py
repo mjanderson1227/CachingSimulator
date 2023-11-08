@@ -30,3 +30,14 @@ cache_builder = CacheBuilder(
 
 # Print the cache information.
 print(cache_builder)
+
+# Parse the trace files.
+for trace_file in cache_builder.trace_files:
+    with open(trace_file, 'r') as input_file:
+        for i in range(20):
+            line1 = input_file.readline().split(' ')
+            read_length = line1[1][1:-2]
+            address = line1[2]
+            line2 = input_file.readline().split(' ')
+            line3 = input_file.readline()
+            print(f'0x{address}: ({read_length})')
