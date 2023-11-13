@@ -1,0 +1,8 @@
+{
+	"trace_files": ["Trace1.trc"],
+	"cache_size": 512,
+	"block_size": 16,
+	"associativity": 8,
+	"replacement_policy": "Random",
+	"physical_size": 4194304
+}
