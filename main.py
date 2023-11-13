@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/opt/homebrew/bin/python3
 
 from argparse import ArgumentParser 
 from cache_builder import CacheBuilder
