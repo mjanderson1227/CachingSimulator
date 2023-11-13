@@ -33,19 +33,25 @@ class CacheBuilder:
 
     # Print info about the cache that will be built using this class.
     def __repr__(self) -> str:
-        str_list = []
-        str_list.append(f'Trace File(s): {", ".join(self.trace_files)}\n')
-        str_list.append('***** Cache Input Parameters *****')
-        str_list.append(f'Cache Size: {int(self.cache_size / 1024):>26} KB')
-        str_list.append(f'Block Size: {self.block_size:>25} Bytes')
-        str_list.append(f'Associativity: {self.associativity:>21}')
-        str_list.append(f'Replacement Policy: {self.replacement_policy:>17}\n')
-        str_list.append('***** Cache Calculated Values *****\n')
-        str_list.append(f'Total # Blocks: {self.number_blocks:>24}')
-        str_list.append(f'Tag Size: {self.tag_bits:>27} bits')
-        str_list.append(f'Index Size: {self.index_bits:>25} bits')
-        str_list.append(f'Total # Rows: {self.number_rows:>25}')
-        str_list.append(f'Overhead Size: {self.overhead:>25} bytes')
-        str_list.append(f'Implementation Memory Size: {self.total_size / 1024:>13.2f} KB ({self.total_size} bytes)')
-        str_list.append(f'Cost: {f"${round(self.total_size / 1024 * 0.09, 2):.2f} @ ($0.09 / KB)":>50}')
-        return '\n'.join(str_list)
+        # Use to format the string to be printed.
+        FORMAT_OFFSET = 30
+        format_string = lambda label, output: f'{label}: {"".join([" " for _ in range(FORMAT_OFFSET - len(label))])}{output}\n'
+
+        return ''.join([
+            'Cache Simulator - CS 3853 Fall 2023 - Group #06\n\n',
+            f'Trace File(s): {", ".join(self.trace_files)}\n\n',
+            '***** Cache Input Parameters *****\n\n',
+            format_string('Cache Size', f'{int(self.cache_size / 1024)} KB'),
+            format_string('Block Size', f'{self.block_size} Bytes'),
+            format_string('Associativity', f'{self.associativity}'),
+            format_string('Replacement Policy', f'{self.replacement_policy}'),
+            '\n',
+            '***** Cache Calculated Values *****\n\n',
+            format_string('Total # Blocks', f'{self.number_blocks}'),
+            format_string('Tag Size', f'{self.tag_bits} bits'),
+            format_string('Index Size', f'{self.index_bits} bits'),
+            format_string('Total # Rows', f'{self.number_rows}'),
+            format_string('Overhead Size', f'{self.overhead} bytes'),
+            format_string('Implementation Memory Size', f'{self.total_size / 1024:.2f} KB ({self.total_size} bytes)'),
+            format_string('Cost', f'${round(self.total_size / 1024 * 0.09, 2):.2f} @ ($0.09 / KB)'),
+        ])
