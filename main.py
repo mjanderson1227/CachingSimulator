@@ -1,5 +1,8 @@
-from argparse import ArgumentParser 
+from argparse import ArgumentParser
+from dataclasses import dataclass 
 from cache_builder import CacheBuilder
+from cache import Address, Cache
+from itertools import groupby
 
 # Create a new ArgumentParser to parse the command line arguments.
 parse = ArgumentParser(
@@ -29,13 +32,52 @@ cache_builder = CacheBuilder(
 # Print the cache information.
 print(cache_builder)
 
+# Create a new cache from the builder.
+cache = Cache(cache_builder)
+
+# Print the actual cache data.
+# print(cache)
+
+def simulate_fetch(address: int, length: int): 
+    addr = Address(address, cache_builder)
+    LIST_OF_ONES = ["FF"] * length
+    cache.read_cache(addr, LIST_OF_ONES)
+    
+# TODO: Finish Defining this function
+def simulate_data(dst: int, src: int):
+    pass
+
+@dataclass
+class UnwrapResult:
+    fetch: list[tuple]
+    data: list[tuple]
+def unwrap_group(grouped_values: groupby) -> UnwrapResult:
+    fetch = []
+    data = []
+    for key, group in grouped_values:
+        for member in group:
+            # Filter empty spaces from the list.
+            split = list(filter(lambda x: x != '', member.split(' ')))
+            print(split)
+            if split[0] == 'EIP':
+                length = int(split[1][1:3])
+                address = int(split[2], 16)
+                # print(f'({length}): {address}')
+                fetch.append((address, length))
+            elif split[0] == 'dstM':
+                dst = int(split[1], 16)
+                src = int(split[4], 16)
+                # print(f'dst: {dst}  ::  src: {src}')
+                data.append((dst, src))
+    return UnwrapResult(fetch, data)
+
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
     with open(trace_file, 'r') as input_file:
-        for i in range(20):
-            line1 = input_file.readline().split(' ')
-            read_length = line1[1][1:-2]
-            address = line1[2]
-            line2 = input_file.readline().split(' ')
-            line3 = input_file.readline()
-            print(f'0x{address}: ({read_length})')
+        values = groupby(input_file, lambda x: x[0:4])
+        result = unwrap_group(values)
+        for item in result.fetch:
+            print(item)
+            simulate_fetch(*item)
+        # for fetch, data in zip(result.fetch, result.data):
+            # simulate_fetch()
