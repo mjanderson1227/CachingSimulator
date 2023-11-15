@@ -10,13 +10,9 @@ class Address:
     offset: int
     def __init__(self, address: int, builder: CacheBuilder):
         binary_string = bin(address)
-        try:
-            self.tag = int(binary_string[0:builder.tag_bits], 2)
-            print(self.tag)
-            self.index = int(binary_string[builder.tag_bits:builder.index_bits], 2)
-            self.offset = int(binary_string[builder.index_bits:builder.block_bits], 2)
-        except ValueError:
-            print(binary_string[builder.tag_bits:builder.index_bits])
+        self.tag = int(binary_string[0:builder.tag_bits], 2)
+        self.index = int(binary_string[builder.tag_bits:builder.index_bits], 2)
+        self.offset = int(binary_string[builder.index_bits:builder.block_bits], 2)
 
 @dataclass
 class CacheBlock:

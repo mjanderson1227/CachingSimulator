@@ -40,25 +40,29 @@ cache = Cache(cache_builder)
 
 def simulate_fetch(address: int, length: int): 
     addr = Address(address, cache_builder)
-    LIST_OF_ONES = ["FF"] * length
+    FILLED_VALUE = ["F"] * length
     cache.read_cache(addr, LIST_OF_ONES)
     
 # TODO: Finish Defining this function
 def simulate_data(dst: int, src: int):
-    pass
+    cache.read_cache(src, LIST_OF_ONES)
+    FILLED_VALUE = ["F"] * length
 
 @dataclass
 class UnwrapResult:
     fetch: list[tuple]
     data: list[tuple]
 def unwrap_group(grouped_values: groupby) -> UnwrapResult:
+    filter_list = lambda li: list(filter(lambda x: x != '', li))
     fetch = []
     data = []
     for key, group in grouped_values:
+        if key == '\n':
+            continue
+
         for member in group:
             # Filter empty spaces from the list.
-            split = list(filter(lambda x: x != '', member.split(' ')))
-            print(split)
+            split = filter_list(member.split(' '))
             if split[0] == 'EIP':
                 length = int(split[1][1:3])
                 address = int(split[2], 16)
@@ -77,7 +81,6 @@ for trace_file in cache_builder.trace_files:
         values = groupby(input_file, lambda x: x[0:4])
         result = unwrap_group(values)
         for item in result.fetch:
-            print(item)
             simulate_fetch(*item)
         # for fetch, data in zip(result.fetch, result.data):
             # simulate_fetch()
