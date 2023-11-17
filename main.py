@@ -36,17 +36,16 @@ print(cache_builder)
 cache = Cache(cache_builder)
 
 # Print the actual cache data.
-# print(cache)
 
 def simulate_fetch(address: int, length: int): 
     addr = Address(address, cache_builder)
-    FILLED_VALUE = ["F"] * length
-    cache.read_cache(addr, LIST_OF_ONES)
+    cache.read_cache(addr)
     
-# TODO: Finish Defining this function
 def simulate_data(dst: int, src: int):
-    cache.read_cache(src, LIST_OF_ONES)
-    FILLED_VALUE = ["F"] * length
+    addr_src = Address(src, cache_builder)
+    addr_dst = Address(dst, cache_builder)
+    cache.read_cache(addr_src)
+    cache.read_cache(addr_dst)
 
 @dataclass
 class UnwrapResult:
@@ -63,24 +62,28 @@ def unwrap_group(grouped_values: groupby) -> UnwrapResult:
         for member in group:
             # Filter empty spaces from the list.
             split = filter_list(member.split(' '))
-            if split[0] == 'EIP':
+
+            if key == 'EIP':
                 length = int(split[1][1:3])
                 address = int(split[2], 16)
-                # print(f'({length}): {address}')
                 fetch.append((address, length))
-            elif split[0] == 'dstM':
+
+            elif key == 'dst':
                 dst = int(split[1], 16)
                 src = int(split[4], 16)
-                # print(f'dst: {dst}  ::  src: {src}')
                 data.append((dst, src))
+
     return UnwrapResult(fetch, data)
 
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
     with open(trace_file, 'r') as input_file:
-        values = groupby(input_file, lambda x: x[0:4])
+        values = groupby(input_file, lambda x: x[0:3])
         result = unwrap_group(values)
-        for item in result.fetch:
-            simulate_fetch(*item)
-        # for fetch, data in zip(result.fetch, result.data):
-            # simulate_fetch()
+        for fetch, data in zip(result.fetch, result.data):
+            # Unpack the tuples into the arguments.
+            simulate_fetch(*fetch)
+            simulate_data(*data)
+
+# Print the cache data.
+print(cache)
