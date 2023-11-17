@@ -63,64 +63,66 @@ class Cache:
 
         for _ in range(builder.number_rows):
             block_list = [CacheBlock(self.builder.block_size) for _ in range(self.builder.associativity)]
-            row_object = CacheRow(block_list, self.builder.associativity)
+            row_object = CacheRow(block_list, 0)
             self.rows.append(row_object)
 
+    # Formatting for output printing.
     def __repr__(self) -> str:
         to_return = []
-        for row in self.rows:
-            for block in row.blocks:
-                to_return.append(str(block.data));
+        for row_index, row in enumerate(self.rows):
+            row_str = [f'row {row_index}']
+            for block_index, block in enumerate(row.blocks):
+                row_str.append(f'\t{block_index}: {block.data}');
+            to_return.append('\n'.join(row_str))
+        to_return.append(str(self.hits))
+        to_return.append(str(self.compulsory_misses))
+        to_return.append(str(self.conflict_misses))
         return '\n'.join(to_return)
 
-    # Need to read the number of bytes from the file and then make the
-    def read_cache(self, address: Address):
-
-        # Split the address if a miss will cover 2 rows.
-        logistics: list[tuple[Address, int]] = [(address, self.builder.block_size - address.offset)]
-        if address.offset != 0:
-            next_row = Address(address.full + self.builder.block_size, self.builder)
-            logistics.append((next_row, address.offset))
-
-        for row_info in logistics:
-            cur_address = row_info[0]
-            n_bytes = row_info[1]
-            print(bin(cur_address.offset), n_bytes)
-
-            current_row = self.rows[cur_address.index]
-            is_full = current_row.blocks_filled >= self.builder.associativity
-
-            # Find a block that has a matching tag.
-            filtered_row = list(filter(lambda block: block.tag == address.tag, current_row.blocks))
-
-            # Block was not found in the list.
-            if len(filtered_row) == 0:
-                block_data = None
-                if is_full:
-                    # Conflict Miss, swap a block.
+    def access(self, address_list: list[Address], length_list: list[int]):
+        for address, length in zip(address_list, length_list):
+            cur_row = self.rows[address.index]
+            found_block = list(filter(lambda block: block.tag == address.tag, cur_row.blocks))
+            if len(found_block) == 0:
+                new_block = None
+                if cur_row.blocks_filled == (associativity := self.builder.associativity) - 1:
+                    print("Conflict Miss.")
                     self.conflict_misses += 1
-                    random_index = random.randrange(self.builder.associativity)
-                    random_block = current_row.blocks[random_index]
-                    random_block.tag = cur_address.tag
-                    random_block.valid = True
-                    block_data = random_block
-
+                    random_block = cur_row.blocks[random.randrange(associativity)]
+                    random_block.tag = address.tag
+                    new_block = random_block
                 else:
+                    print("Compulsory Miss.")
                     self.compulsory_misses += 1
-                    next_block = current_row.blocks[current_row.blocks_filled]
+                    next_block = cur_row.blocks[cur_row.blocks_filled + 1]
+                    next_block.tag = address.tag
                     next_block.valid = True
-                    next_block.tag = cur_address.tag
-                    current_row.blocks_filled += 1
-                    block_data = next_block
+                    cur_row.blocks_filled += 1
+                    new_block = next_block
 
-                # move n_bytes of memory into the cache.
-                tracked_offset = cur_address.offset
-                for _ in range(n_bytes):
-                    # print(tracked_offset)
-                    block_data.data[tracked_offset] = 0xFF
-                    tracked_offset += 1
+                # Fill the cache.
+                end_index = address.offset + length
+                for index in range(address.offset, end_index):
+                    new_block.data[index] = 0xFF
+                    # print(index)
 
-
-            # Block with matching tag found in the list.
             else:
+                # print(found_block)
+                print("Hit!")
                 self.hits += 1
+
+    # Need to read the number of bytes from the file and then make the
+    def read_cache(self, address: Address, length: int):
+        for _ in range(length):
+            addr_list = [address]
+            length_list = [self.builder.block_size]
+            if address.offset != 0:
+                remaining_space = self.builder.block_size - address.offset
+                addr_next_row = Address(address.full + remaining_space, self.builder)
+                addr_list.append(addr_next_row)
+                length_list[0] -= address.offset
+                length_list.append(address.offset)
+            # print(addr_list)
+            # print(length_list)
+            self.access(addr_list, length_list)
+            address = Address(address.full + 1, self.builder)

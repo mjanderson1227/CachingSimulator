@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from dataclasses import dataclass 
+from dataclasses import dataclass
 from cache_builder import CacheBuilder
 from cache import Address, Cache
 from itertools import groupby
@@ -39,13 +39,17 @@ cache = Cache(cache_builder)
 
 def simulate_fetch(address: int, length: int): 
     addr = Address(address, cache_builder)
-    cache.read_cache(addr)
+    cache.read_cache(addr, length)
     
+# Assume all data accesses are 4 bytes.
 def simulate_data(dst: int, src: int):
-    addr_src = Address(src, cache_builder)
-    addr_dst = Address(dst, cache_builder)
-    cache.read_cache(addr_src)
-    cache.read_cache(addr_dst)
+    LENGTH = 4
+    if src:
+        addr_src = Address(src, cache_builder)
+        cache.read_cache(addr_src, LENGTH)
+    if dst:
+        addr_dst = Address(dst, cache_builder)
+        cache.read_cache(addr_dst, LENGTH)
 
 @dataclass
 class UnwrapResult:
@@ -58,21 +62,17 @@ def unwrap_group(grouped_values: groupby) -> UnwrapResult:
     for key, group in grouped_values:
         if key == '\n':
             continue
-
         for member in group:
             # Filter empty spaces from the list.
             split = filter_list(member.split(' '))
-
             if key == 'EIP':
                 length = int(split[1][1:3])
                 address = int(split[2], 16)
                 fetch.append((address, length))
-
             elif key == 'dst':
                 dst = int(split[1], 16)
                 src = int(split[4], 16)
                 data.append((dst, src))
-
     return UnwrapResult(fetch, data)
 
 # Parse the trace files.
@@ -86,4 +86,4 @@ for trace_file in cache_builder.trace_files:
             simulate_data(*data)
 
 # Print the cache data.
-print(cache)
+# print(cache)
