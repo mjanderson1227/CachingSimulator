@@ -19,5 +19,5 @@ for word in ${keywords[@]}; do
 	((offset++))
 done
 
-args="${start_string:-"-f Trace1.trc"} -s ${!cache_size:-512} -b ${!block_size:-16} -a ${!associativity:-8} -r ${!replacement_policy:-"Random"} -p ${!physical_memory:-4194304}"
+args="${start_string:-"-f Trace1.trc"} -s ${cache_size:-512} -b ${block_size:-16} -a ${associativity:-8} -r ${replacement_policy:-"Random"} -p ${physical_memory:-4194304}"
 python3 ../main.py $args

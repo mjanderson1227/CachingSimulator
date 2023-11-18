@@ -41,7 +41,7 @@ def simulate_fetch(address: int, length: int):
     addr = Address(address, cache_builder)
     cache.read_cache(addr, length)
     
-# Assume all data accesses are 4 bytes.
+# Assume all data accesses are 4 bytes. 
 def simulate_data(dst: int, src: int):
     LENGTH = 4
     if src:
@@ -86,4 +86,4 @@ for trace_file in cache_builder.trace_files:
             simulate_data(*data)
 
 # Print the cache data.
-# print(cache)
+print(cache)

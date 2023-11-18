@@ -32,20 +32,26 @@ class Address:
         self.index = int(binary_string[builder.tag_bits:off_begin], 2)
         self.offset = int(binary_string[off_begin:], 2)
 
+# Command that the program will use to pass to handle a cache access.
+@dataclass
+class AccessCommand:
+    current_row: Address
+    current_length: int
+    next_row: Address
+    next_length: int
+    requires_row_carry: bool
+
 @dataclass
 class CacheBlock:
     tag: int
-    valid: bool
     data: bytearray
-    def __init__(self, block_size: int):
-        self.tag = 0
-        self.valid = False
+    def __init__(self, tag: int, block_size: int):
+        self.tag = tag
         self.data = bytearray(block_size)
 
 @dataclass
 class CacheRow:
-    blocks: list[CacheBlock]
-    blocks_filled: int
+    blocks: dict[int, CacheBlock]
 
 class Cache:
     rows: list[CacheRow]
@@ -62,65 +68,84 @@ class Cache:
         self.builder = builder
 
         for _ in range(builder.number_rows):
-            block_list = [CacheBlock(self.builder.block_size) for _ in range(self.builder.associativity)]
-            row_object = CacheRow(block_list, 0)
+            block_list = {}
+            row_object = CacheRow(block_list)
             self.rows.append(row_object)
+
 
     # Formatting for output printing.
     def __repr__(self) -> str:
+        FORMAT_OFFSET = 24
+        format_string = lambda label, output: f'{label}: {"".join([" " for _ in range(FORMAT_OFFSET - len(label))])}{output}'
+
+        total_accesses = sum([self.compulsory_misses, self.conflict_misses, self.hits])
+        hit_rate = round((self.hits * 100) / total_accesses, 4)
+        miss_rate = round(1 - hit_rate, 4)
+
+        return '\n'.join([
+            "***** CACHE SIMULATION RESULTS *****\n",
+            format_string("Total Cache Accesses", f'{total_accesses}'),
+            format_string("Cache Hits", f'{self.hits}'),
+            format_string("Cache Misses", f'{self.conflict_misses + self.compulsory_misses}'),
+            format_string("--- Compulsory Misses", f'{self.compulsory_misses}'),
+            format_string("--- Conflict Misses", f'{self.conflict_misses}'),
+            "\n***** *****  CACHE HIT & MISS RATE  ***** *****\n",
+            format_string("Hit Rate", hit_rate),
+            format_string("Miss Rate", miss_rate)
+            ])
+
+    def print_full(self) -> str:
         to_return = []
         for row_index, row in enumerate(self.rows):
             row_str = [f'row {row_index}']
-            for block_index, block in enumerate(row.blocks):
-                row_str.append(f'\t{block_index}: {block.data}');
+            for tag, block in row.blocks.items():
+                row_str.append(f'\t{tag}: {block.data}');
             to_return.append('\n'.join(row_str))
-        to_return.append(str(self.hits))
-        to_return.append(str(self.compulsory_misses))
-        to_return.append(str(self.conflict_misses))
         return '\n'.join(to_return)
 
-    def access(self, address_list: list[Address], length_list: list[int]):
-        address = address_list[0]
-        cur_row = self.rows[address.index]
-        found_block = list(filter(lambda block: block.tag == address.tag, cur_row.blocks))
-        if len(found_block) == 0:
-            new_block = None
-            if cur_row.blocks_filled == (associativity := self.builder.associativity) - 1:
-                print("Conflict Miss.")
-                self.conflict_misses += 1
-                random_block = cur_row.blocks[random.randrange(associativity)]
-                random_block.tag = address.tag
-                new_block = random_block
-            else:
-                print("Compulsory Miss.")
-                self.compulsory_misses += 1
-                next_block = cur_row.blocks[cur_row.blocks_filled + 1]
-                next_block.tag = address.tag
-                next_block.valid = True
-                cur_row.blocks_filled += 1
-                new_block = next_block
-            # Fill the cache.
-            for address, length in zip(address_list, length_list):
-                end_index = address.offset + length
-                for index in range(address.offset, end_index):
-                    new_block.data[index] = 0xFF
-        else:
-            # print(found_block)
-            print("Hit!")
+
+    def access(self, command: AccessCommand):
+        row1 = self.rows[command.current_row.index]
+        cur_tag = command.current_row.tag
+        cur_offset = command.current_row.offset
+
+        is_valid = command.current_row.tag in row1.blocks.keys()
+        if is_valid:
             self.hits += 1
+        else:
+            block_to_add = CacheBlock(cur_tag, self.builder.block_size)
+            for i in range(cur_offset, self.builder.block_size):
+                block_to_add.data[i] = 0xFF
+            if len(row1.blocks) >= self.builder.associativity:
+                random_tag = random.choice(list(row1.blocks.keys()))
+                del row1.blocks[random_tag]
+                self.conflict_misses += 1
+                row1.blocks[cur_tag] = block_to_add
+            else:
+                self.compulsory_misses += 1
+                row1.blocks[cur_tag] = block_to_add
+
+        row2 = self.rows[command.next_length]
+
+        if command.requires_row_carry and not is_valid:
+            block_to_add = CacheBlock(command.next_row.tag, self.builder.block_size)
+            for i in range(0, command.next_length):
+                block_to_add.data[i] = 0xFF
+            if len(row2.blocks) >= self.builder.associativity:
+                random_tag = random.choice(list(row2.blocks.keys()))
+                del row2.blocks[random_tag]
+                row2.blocks[command.next_row.tag] = block_to_add
+            else:
+                row2.blocks[command.next_row.tag] = block_to_add
 
     # Need to read the number of bytes from the file and then make the
     def read_cache(self, address: Address, length: int):
         for _ in range(length):
-            addr_list = [address]
-            length_list = [self.builder.block_size]
-            if address.offset != 0:
-                remaining_space = self.builder.block_size - address.offset
-                addr_next_row = Address(address.full + remaining_space, self.builder)
-                addr_list.append(addr_next_row)
-                length_list[0] -= address.offset
-                length_list.append(address.offset)
-            # print(addr_list)
-            # print(length_list)
-            self.access(addr_list, length_list)
+            new_offset = self.builder.block_size - address.offset
+            next_row_address = Address(address.full + new_offset, self.builder)
+
+            command = AccessCommand(address, new_offset, next_row_address, address.offset, address.offset != 0)
+            self.access(command)
+
+            # Increment the address.
             address = Address(address.full + 1, self.builder)
