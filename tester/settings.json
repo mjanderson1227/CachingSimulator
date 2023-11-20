@@ -1,5 +1,5 @@
 {
-	"trace_files": ["Trace1.trc"],
+	"trace_files": ["TinyTrace.trc"],
 	"cache_size": 512,
 	"block_size": 16,
 	"associativity": 8,

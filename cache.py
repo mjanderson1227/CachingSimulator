@@ -80,7 +80,7 @@ class Cache:
 
         total_accesses = sum([self.compulsory_misses, self.conflict_misses, self.hits])
         hit_rate = round((self.hits * 100) / total_accesses, 4)
-        miss_rate = round(1 - hit_rate, 4)
+        miss_rate = round(100 - hit_rate, 4)
 
         return '\n'.join([
             "***** CACHE SIMULATION RESULTS *****\n",
@@ -90,8 +90,8 @@ class Cache:
             format_string("--- Compulsory Misses", f'{self.compulsory_misses}'),
             format_string("--- Conflict Misses", f'{self.conflict_misses}'),
             "\n***** *****  CACHE HIT & MISS RATE  ***** *****\n",
-            format_string("Hit Rate", hit_rate),
-            format_string("Miss Rate", miss_rate)
+            format_string("Hit Rate", f'{hit_rate}%'),
+            format_string("Miss Rate", f'{miss_rate}%')
             ])
 
     def print_full(self) -> str:
@@ -103,11 +103,11 @@ class Cache:
             to_return.append('\n'.join(row_str))
         return '\n'.join(to_return)
 
-
     def access(self, command: AccessCommand):
         row1 = self.rows[command.current_row.index]
         cur_tag = command.current_row.tag
         cur_offset = command.current_row.offset
+        print("FIRST ROW:")
 
         is_valid = command.current_row.tag in row1.blocks.keys()
         if is_valid:
@@ -118,22 +118,28 @@ class Cache:
                 block_to_add.data[i] = 0xFF
             if len(row1.blocks) >= self.builder.associativity:
                 random_tag = random.choice(list(row1.blocks.keys()))
-                del row1.blocks[random_tag]
+                row1.blocks.pop(random_tag)
                 self.conflict_misses += 1
                 row1.blocks[cur_tag] = block_to_add
             else:
                 self.compulsory_misses += 1
                 row1.blocks[cur_tag] = block_to_add
 
-        row2 = self.rows[command.next_length]
-
         if command.requires_row_carry and not is_valid:
-            block_to_add = CacheBlock(command.next_row.tag, self.builder.block_size)
+            print("SECOND ROW:")
+
+            row2 = self.rows[command.next_row.index]
+
+            block_to_add = None
+            if command.next_row.tag in row2.blocks.keys():
+                block_to_add = row2.blocks[command.next_row.tag]
+            else:
+                block_to_add = CacheBlock(command.next_row.tag, self.builder.block_size)
             for i in range(0, command.next_length):
                 block_to_add.data[i] = 0xFF
             if len(row2.blocks) >= self.builder.associativity:
                 random_tag = random.choice(list(row2.blocks.keys()))
-                del row2.blocks[random_tag]
+                row2.blocks.pop(random_tag)
                 row2.blocks[command.next_row.tag] = block_to_add
             else:
                 row2.blocks[command.next_row.tag] = block_to_add
