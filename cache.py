@@ -32,15 +32,6 @@ class Address:
         self.index = int(binary_string[builder.tag_bits:off_begin], 2)
         self.offset = int(binary_string[off_begin:], 2)
 
-# Command that the program will use to pass to handle a cache access.
-@dataclass
-class AccessCommand:
-    current_row: Address
-    current_length: int
-    next_row: Address
-    next_length: int
-    requires_row_carry: bool
-
 @dataclass
 class CacheBlock:
     tag: int
@@ -78,7 +69,7 @@ class Cache:
         FORMAT_OFFSET = 24
         format_string = lambda label, output: f'{label}: {"".join([" " for _ in range(FORMAT_OFFSET - len(label))])}{output}'
 
-        total_accesses = sum([self.compulsory_misses, self.conflict_misses, self.hits])
+        total_accesses = self.compulsory_misses + self.hits + self.conflict_misses
         hit_rate = round((self.hits * 100) / total_accesses, 4)
         miss_rate = round(100 - hit_rate, 4)
 
@@ -103,55 +94,28 @@ class Cache:
             to_return.append('\n'.join(row_str))
         return '\n'.join(to_return)
 
-    def access(self, command: AccessCommand):
-        row1 = self.rows[command.current_row.index]
-        cur_tag = command.current_row.tag
-        cur_offset = command.current_row.offset
-        print("FIRST ROW:")
-
-        is_valid = command.current_row.tag in row1.blocks.keys()
-        if is_valid:
-            self.hits += 1
-        else:
-            block_to_add = CacheBlock(cur_tag, self.builder.block_size)
-            for i in range(cur_offset, self.builder.block_size):
-                block_to_add.data[i] = 0xFF
-            if len(row1.blocks) >= self.builder.associativity:
-                random_tag = random.choice(list(row1.blocks.keys()))
-                row1.blocks.pop(random_tag)
-                self.conflict_misses += 1
-                row1.blocks[cur_tag] = block_to_add
+    def access(self, addr_list: list[Address]):
+        for current_location in addr_list:
+            current_row = self.rows[current_location.index]
+            if current_location.tag in current_row.blocks.keys():
+                self.hits += 1
             else:
-                self.compulsory_misses += 1
-                row1.blocks[cur_tag] = block_to_add
+                new_block = CacheBlock(current_location.tag, self.builder.block_size)
+                for i in range(0, self.builder.block_size):
+                    new_block.data[i] = 0xFF
+                if len(current_row.blocks) >= self.builder.associativity:
+                    self.conflict_misses += 1
+                    random_tag = random.choice(list(current_row.blocks.keys()))
+                    current_row.blocks.pop(random_tag)
+                    current_row.blocks[current_location.tag] = new_block
+                else:
+                    self.compulsory_misses += 1
+                    current_row.blocks[current_location.tag] = new_block
 
-        if command.requires_row_carry and not is_valid:
-            print("SECOND ROW:")
-
-            row2 = self.rows[command.next_row.index]
-
-            block_to_add = None
-            if command.next_row.tag in row2.blocks.keys():
-                block_to_add = row2.blocks[command.next_row.tag]
-            else:
-                block_to_add = CacheBlock(command.next_row.tag, self.builder.block_size)
-            for i in range(0, command.next_length):
-                block_to_add.data[i] = 0xFF
-            if len(row2.blocks) >= self.builder.associativity:
-                random_tag = random.choice(list(row2.blocks.keys()))
-                row2.blocks.pop(random_tag)
-                row2.blocks[command.next_row.tag] = block_to_add
-            else:
-                row2.blocks[command.next_row.tag] = block_to_add
-
-    # Need to read the number of bytes from the file and then make the
     def read_cache(self, address: Address, length: int):
-        for _ in range(length):
-            new_offset = self.builder.block_size - address.offset
-            next_row_address = Address(address.full + new_offset, self.builder)
-
-            command = AccessCommand(address, new_offset, next_row_address, address.offset, address.offset != 0)
-            self.access(command)
-
-            # Increment the address.
-            address = Address(address.full + 1, self.builder)
+        # Determine the addresses that the cache will access.
+        addr_list = [address]
+        if address.offset + length >= self.builder.block_size:
+            second_address = Address(address.full + length, self.builder)
+            addr_list.append(second_address)
+        self.access(addr_list)
