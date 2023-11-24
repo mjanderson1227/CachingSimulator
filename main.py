@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from cache_builder import CacheBuilder
-from cache import Address, Cache
+from cache import Cache
+from address import Address
 from itertools import groupby
 
 # Create a new ArgumentParser to parse the command line arguments.
@@ -51,39 +51,21 @@ def simulate_data(dst: int, src: int):
         addr_dst = Address(dst, cache_builder)
         cache.read_cache(addr_dst, LENGTH)
 
-@dataclass
-class UnwrapResult:
-    fetch: list[tuple]
-    data: list[tuple]
-def unwrap_group(grouped_values: groupby) -> UnwrapResult:
-    filter_list = lambda li: list(filter(lambda x: x != '', li))
-    fetch = []
-    data = []
-    for key, group in grouped_values:
-        if key == '\n':
-            continue
-        for member in group:
-            # Filter empty spaces from the list.
-            split = filter_list(member.split(' '))
-            if key == 'EIP':
-                length = int(split[1][1:3])
-                address = int(split[2], 16)
-                fetch.append((address, length))
-            elif key == 'dst':
-                dst = int(split[1], 16)
-                src = int(split[4], 16)
-                data.append((dst, src))
-    return UnwrapResult(fetch, data)
-
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
     with open(trace_file, 'r') as input_file:
-        values = groupby(input_file, lambda x: x[0:3])
-        result = unwrap_group(values)
-        for fetch, data in zip(result.fetch, result.data):
-            # Unpack the tuples into the arguments.
-            simulate_fetch(*fetch)
-            simulate_data(*data)
+        # Custom iterator that groups the lines and loops through them.
+        for line in input_file:
+            splitline = list(filter(lambda token: token != '', line.split(' ')))
+            identifier = splitline[0][0:3]
+            if identifier == 'EIP':
+                length = int(splitline[1][1:3])
+                address = int(splitline[2], 16)
+                simulate_fetch(address, length)
+            elif identifier == 'dst':
+                dst = int(splitline[1], 16)
+                src = int(splitline[4], 16)
+                simulate_data(dst, src)
 
 # Print the cache data.
 print(cache)
