@@ -44,7 +44,7 @@ class Cache:
             ])
 
     def access(self, address: Address, length: int):
-        # Keep track of the offset and append each row address to the address queue.
+        # Track the offset of each address that is accessed.
         current_offset = address.offset
 
         # Determine the addresses that the cache will access.
@@ -57,15 +57,14 @@ class Cache:
         # Go through the address queue and access each address.
         for current_location in addr_queue:
             current_row = self.rows[current_location.index]
+
             if current_location.tag in current_row:
                 self.hits += 1
-                
+            elif len(current_row) >= self.builder.associativity:
+                self.conflict_misses += 1
+                random_tag = random.choice(list(current_row))
+                current_row.remove(random_tag)
             else:
-                if len(current_row) >= self.builder.associativity:
-                    self.conflict_misses += 1
-                    random_tag = random.choice(list(current_row))
-                    current_row.remove(random_tag)
-                else:
-                    self.compulsory_misses += 1
-                    
-                current_row.add(current_location.tag)
+                self.compulsory_misses += 1
+
+            current_row.add(current_location.tag)
