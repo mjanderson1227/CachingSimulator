@@ -8,6 +8,7 @@ class Cache:
     compulsory_misses: int
     conflict_misses: int
     builder: CacheBuilder
+    cpi: float
 
     def __init__(self, builder: CacheBuilder):
         self.rows = []
@@ -15,6 +16,7 @@ class Cache:
         self.compulsory_misses = 0
         self.conflict_misses = 0
         self.builder = builder
+        self.cpi = 0.00
 
         for _ in range(builder.number_rows):
             tag_set = set()
@@ -41,22 +43,7 @@ class Cache:
             format_string("Miss Rate", f'{miss_rate}%')
             ])
 
-    def access(self, addr_list: list[Address]):
-        for current_location in addr_list:
-            current_row = self.rows[current_location.index]
-            if current_location.tag in current_row:
-                self.hits += 1
-            else:
-                if len(current_row) >= self.builder.associativity:
-                    self.conflict_misses += 1
-                    random_tag = random.choice(list(current_row))
-                    current_row.remove(random_tag)
-                else:
-                    self.compulsory_misses += 1
-                    
-                current_row.add(current_location.tag)
-
-    def enqueue_addresses(self, address: Address, length: int):
+    def access(self, address: Address, length: int):
         # Keep track of the offset and append each row address to the address queue.
         current_offset = address.offset
 
@@ -66,4 +53,19 @@ class Cache:
             next_address = Address(address.full + length, self.builder)
             addr_queue.append(next_address)
             current_offset -= self.builder.block_size
-        self.access(addr_queue)
+
+        # Go through the address queue and access each address.
+        for current_location in addr_queue:
+            current_row = self.rows[current_location.index]
+            if current_location.tag in current_row:
+                self.hits += 1
+                
+            else:
+                if len(current_row) >= self.builder.associativity:
+                    self.conflict_misses += 1
+                    random_tag = random.choice(list(current_row))
+                    current_row.remove(random_tag)
+                else:
+                    self.compulsory_misses += 1
+                    
+                current_row.add(current_location.tag)
