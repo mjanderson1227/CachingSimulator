@@ -1,22 +1,9 @@
 from cache_builder import CacheBuilder
-from dataclasses import dataclass
 from address import Address
 import random
 
-@dataclass
-class CacheBlock:
-    tag: int
-    data: bytearray
-    def __init__(self, tag: int, block_size: int):
-        self.tag = tag
-        self.data = bytearray(block_size)
-
-@dataclass
-class CacheRow:
-    blocks: dict[int, set]
-
 class Cache:
-    rows: list[CacheRow]
+    rows: list[set[int]]
     hits: int
     compulsory_misses: int
     conflict_misses: int
@@ -30,10 +17,8 @@ class Cache:
         self.builder = builder
 
         for _ in range(builder.number_rows):
-            block_list = {}
-            row_object = CacheRow(block_list)
-            self.rows.append(row_object)
-
+            tag_set = set()
+            self.rows.append(tag_set)
 
     # Formatting for output printing.
     def __repr__(self) -> str:
@@ -59,23 +44,26 @@ class Cache:
     def access(self, addr_list: list[Address]):
         for current_location in addr_list:
             current_row = self.rows[current_location.index]
-            if current_location.tag in current_row.blocks.keys():
+            if current_location.tag in current_row:
                 self.hits += 1
             else:
-                new_block = CacheBlock(current_location.tag, self.builder.block_size)
-                if len(current_row.blocks) >= self.builder.associativity:
+                if len(current_row) >= self.builder.associativity:
                     self.conflict_misses += 1
-                    random_tag = random.choice(list(current_row.blocks.keys()))
-                    current_row.blocks.pop(random_tag)
-                    current_row.blocks[current_location.tag] = new_block
+                    random_tag = random.choice(list(current_row))
+                    current_row.remove(random_tag)
                 else:
                     self.compulsory_misses += 1
-                    current_row.blocks[current_location.tag] = new_block
+                    
+                current_row.add(current_location.tag)
 
-    def read_cache(self, address: Address, length: int):
+    def enqueue_addresses(self, address: Address, length: int):
+        # Keep track of the offset and append each row address to the address queue.
+        current_offset = address.offset
+
         # Determine the addresses that the cache will access.
         addr_queue = [address]
-        if address.offset + length > self.builder.block_size:
-            second_address = Address(address.full + length, self.builder)
-            addr_queue.append(second_address)
+        while current_offset + length > self.builder.block_size:
+            next_address = Address(address.full + length, self.builder)
+            addr_queue.append(next_address)
+            current_offset -= self.builder.block_size
         self.access(addr_queue)

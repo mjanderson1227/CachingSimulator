@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 from cache_builder import CacheBuilder
 from cache import Cache
 from address import Address
-from itertools import groupby
 
 # Create a new ArgumentParser to parse the command line arguments.
 parse = ArgumentParser(
@@ -39,17 +38,17 @@ cache = Cache(cache_builder)
 
 def simulate_fetch(address: int, length: int): 
     addr = Address(address, cache_builder)
-    cache.read_cache(addr, length)
+    cache.enqueue_addresses(addr, length)
     
 # Assume all data accesses are 4 bytes. 
 def simulate_data(dst: int, src: int):
     LENGTH = 4
     if src:
         addr_src = Address(src, cache_builder)
-        cache.read_cache(addr_src, LENGTH)
+        cache.enqueue_addresses(addr_src, LENGTH)
     if dst:
         addr_dst = Address(dst, cache_builder)
-        cache.read_cache(addr_dst, LENGTH)
+        cache.enqueue_addresses(addr_dst, LENGTH)
 
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
