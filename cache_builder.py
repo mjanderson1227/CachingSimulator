@@ -30,6 +30,10 @@ class CacheBuilder:
         # Calculate overhead.
         self.overhead = self.number_rows * (self.tag_bits + 1)
         self.total_size = self.overhead + self.cache_size
+        self.implementation_size = round(self.total_size / 1024, 2)
+
+        # Calculate cost.
+        self.cost = round(self.total_size / 1024 * 0.09, 2)
 
     # Print info about the cache that will be built using this class.
     def __repr__(self) -> str:
@@ -52,6 +56,6 @@ class CacheBuilder:
             format_string('Index Size', f'{self.index_bits} bits'),
             format_string('Total # Rows', f'{self.number_rows}'),
             format_string('Overhead Size', f'{self.overhead} bytes'),
-            format_string('Implementation Memory Size', f'{self.total_size / 1024:.2f} KB ({self.total_size} bytes)'),
-            format_string('Cost', f'${round(self.total_size / 1024 * 0.09, 2):.2f} @ ($0.09 / KB)'),
+            format_string('Implementation Memory Size', f'{self.implementation_size:.2f} KB ({self.total_size} bytes)'),
+            format_string('Cost', f'${self.cost} @ ($0.09 / KB)'),
         ])

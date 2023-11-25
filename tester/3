@@ -34,10 +34,9 @@ class Cache:
         total_accesses = self.compulsory_misses + self.hits + self.conflict_misses
         hit_rate = round((self.hits * 100) / total_accesses, 4)
         miss_rate = round(100 - hit_rate, 4)
-        unused_blocks = self.builder.number_blocks - self.blocks_filled
-        overhead_per_block = self.builder.overhead / self.builder.number_blocks
-        unused_kb = unused_blocks * (self.builder.block_size + overhead_per_block) / 1024
-        use_percentage = round(unused_kb / self.builder.implementation_size * 100, 2)
+        total_cache_size = self.builder.cache_size / 1024
+        unused_kb = ( (self.builder.number_blocks-self.compulsory_misses) * (self.builder.block_size+self.builder.overhead) ) / 1024 * 1024
+        use_percentage = round(unused_kb / total_cache_size, 2)
         waste = round(unused_kb * 0.09, 2)
 
         return '\n'.join([
@@ -51,15 +50,11 @@ class Cache:
             format_string("Hit Rate", f'{hit_rate}%'),
             format_string("Miss Rate", f'{miss_rate}%'),
             format_string("CPI", f'{self.clock_cycles / self.total_instructions:.2f} Cycles/Instruction'),
-            format_string("Unused Cache Space", f'{unused_kb:.2f} KB / {self.builder.implementation_size} KB = {use_percentage:}% Waste: ${waste}'),
-            format_string("Unused Cache blocks", f'{unused_blocks} / {self.builder.number_blocks}'),
+            format_string("Unused Cache Space", f'{unused_kb:.2f} KB / {total_cache_size} KB = {use_percentage:}% Waste: ${waste}'),
+            format_string("Unused cache blocks", f'{self.builder.number_blocks - self.blocks_filled}'),
             ])
 
-    def access(self, address: Address, length: int, access_type: str):
-        # Increment instruction count if it is an instruction.
-        if access_type == "I":
-            self.total_instructions += 1
-
+    def access(self, address: Address, length: int, type: str):
         # Track the offset of each address that is accessed.
         current_offset = address.offset
 
@@ -89,12 +84,19 @@ class Cache:
                 status = "miss"
                 self.blocks_filled += 1
 
-            n_read = ceil(self.builder.block_size / 4)
-            if access_type == "I":
-                self.clock_cycles += 1 if status == "hit" else 4 * n_read
-                self.clock_cycles += 2
-            else:
-                self.clock_cycles += 1 if status == "hit" else 4 * n_read
+            # Calculating CPI.
+            if status == "hit":
                 self.clock_cycles += 1
+            else:
+                DATA_BUS_WIDTH = 32
+                mem_reads = ceil(self.builder.block_size / DATA_BUS_WIDTH)
+                self.clock_cycles += 4 * mem_reads
+
+            # Check if the type is instruction or data.
+            if type == "I":
+                self.clock_cycles += 1
+                self.total_instructions += 1
+            else:
+                self.clock_cycles += 2
 
             current_row.add(current_location.tag)

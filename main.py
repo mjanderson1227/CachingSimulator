@@ -37,17 +37,17 @@ cache = Cache(cache_builder)
 # Print the actual cache data.
 def simulate_fetch(address: int, length: int): 
     addr = Address(address, cache_builder)
-    cache.access(addr, length)
+    cache.access(addr, length, "I")
     
 # Assume all data accesses are 4 bytes. 
 def simulate_data(dst: int, src: int):
     LENGTH = 4
     if src:
         addr_src = Address(src, cache_builder)
-        cache.access(addr_src, LENGTH)
+        cache.access(addr_src, LENGTH, "D")
     if dst:
         addr_dst = Address(dst, cache_builder)
-        cache.access(addr_dst, LENGTH)
+        cache.access(addr_dst, LENGTH, "D")
 
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
