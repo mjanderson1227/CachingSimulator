@@ -70,14 +70,6 @@ def handle_args(cmd: list[str], csv: TextIOWrapper):
     # Write values to csv file.
     csv.write(result.to_csv() + "\n")
 
-    # result_index = output.find("Total Cache Accesses:")
-
-    # if matches == None:
-        # print("No matches found in output.")
-        # exit()
-    # else:
-        # print(matches.groupdict().items())
-
 # Get the exe file
 executable = arguments.executable
 trace_files = arguments.tracefile_folder
@@ -100,13 +92,17 @@ with open(params) as file, open("results.csv", "w") as csv:
             for assoc in associativities:
                 for bs in block_sizes:
                     cmd = ["python3",
-                            f"{executable}",
-                            f"-f{file}",
-                            f"-s {cs}",
-                            f"-b {bs}",
-                            f"-a {assoc}",
-                            "-r RND",
-                            f"-p 4194304"]
+                           f"{executable}",
+                           "-f",
+                           f"{file}",
+                           "-s",
+                           f"{cs}",
+                           "-b",
+                           f"{bs}",
+                           "-a",
+                           f"{assoc}",
+                           "-r RND",
+                           f"-p 4194304"]
                     print(' '.join(cmd))
                     handle_args(cmd, csv)
     csv.close()
