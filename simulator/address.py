@@ -6,10 +6,11 @@ class Address:
     tag: int
     index: int
     offset: int
+
     # If the address does not have proper zero padding, then this will not work.
     def __init__(self, address: int, builder: CacheBuilder):
-        #while address >= builder.physical_size:
-        #    address -= builder.physical_size
+        while address >= builder.physical_size:
+            address -= builder.physical_size
         self.full = address
         self.partition(builder)
 
@@ -19,7 +20,7 @@ class Address:
         binary_string = bin(self.full)[2:]
 
         # Pad the binary string with zeros so that it conforms to the physical address.
-        if len(binary_string) < builder.address_bits:
+        if len(binary_string) <= builder.address_bits:
             diff = builder.address_bits - len(binary_string)
             binary_string = ('0' * diff) + binary_string
 

@@ -52,7 +52,6 @@ def simulate_data(dst: int, src: int):
 # Parse the trace files.
 for trace_file in cache_builder.trace_files:
     with open(trace_file, 'r') as input_file:
-        # Custom iterator that groups the lines and loops through them.
         for line in input_file:
             splitline = list(filter(lambda token: token != '', line.split(' ')))
             identifier = splitline[0][0:3]

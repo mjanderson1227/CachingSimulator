@@ -1,0 +1,6 @@
+{
+	"cacheSize": [8, 64, 256, 1024],
+	"associativity": [1, 2, 4, 8, 16],
+	"blockSize": [4, 16, 64],
+	"replacementAlgorithm": ["RND"]
+}

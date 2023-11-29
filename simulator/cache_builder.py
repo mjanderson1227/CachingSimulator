@@ -20,8 +20,8 @@ class CacheBuilder:
         self.physical_size = physical_size * 1024
 
         # Calculated values.
-        self.number_blocks = int(self.cache_size / self.block_size)
-        self.number_rows = int(self.number_blocks / self.associativity)
+        self.number_blocks = math.ceil(self.cache_size / self.block_size)
+        self.number_rows = math.ceil(self.number_blocks / self.associativity)
         self.address_bits = math.ceil(math.log2(self.physical_size))
         self.block_bits = math.ceil(math.log2(block_size))
         self.index_bits = math.ceil(math.log2(self.number_rows))

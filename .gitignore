@@ -1,2 +1,4 @@
 __pycache__
+server/
 tester/output.txt
+*.txt
