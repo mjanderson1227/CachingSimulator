@@ -1,5 +1,5 @@
 __pycache__
-results.csv
 server/
 tester/output.txt
 *.txt
+results.csv
