@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
-from io import TextIOWrapper
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import product
+from contextlib import ExitStack
 import json
 from glob import glob
 import subprocess
@@ -10,9 +12,9 @@ parser = ArgumentParser(
         prog='tester.exe',
         description='Tester for the caching simulator.')
 
-parser.add_argument('-e', '--executable')
-parser.add_argument('-t', '--tracefile-folder')
-parser.add_argument('-p', '--parameter-file')
+parser.add_argument('-e', '--executable', required=True)
+parser.add_argument('-t', '--tracefile-folder', required=True)
+parser.add_argument('-p', '--parameter-file', required=True)
 
 arguments = parser.parse_args()
 
@@ -39,8 +41,7 @@ class CacheResults:
     def to_csv(self):
         return f"{self.accesses},{self.hits},{self.misses},{self.compulsory_misses},{self.conflict_misses},{self.hit_rate},{self.miss_rate},{self.cpi}"
 
-
-def handle_args(cmd: list[str], csv: TextIOWrapper):
+def create_line(cmd: list[str]):
     # Supply arguments from the automated file.
     ps = None
 
@@ -67,17 +68,23 @@ def handle_args(cmd: list[str], csv: TextIOWrapper):
         print("No output from process.")
         exit()
 
-    # Write values to csv file.
-    csv.write(result.to_csv() + "\n")
+    # Return the line back to the tasks
+    return result.to_csv() + "\n"
 
 # Get the exe file
 executable = arguments.executable
 trace_files = arguments.tracefile_folder
 params = arguments.parameter_file
 
-with open(params) as file, open("results.csv", "w") as csv:
+CSV_FILE_NAME = "results.csv"
+with ExitStack() as context:
+    # Add each of the conditions for easy cleanup.
+    param_file = context.enter_context(open(params, "r"))
+    csv = context.enter_context(open(CSV_FILE_NAME, "w"))
+    executor_service = context.enter_context(ThreadPoolExecutor())
+
     # Parse the json
-    json_object = json.load(file)
+    json_object = json.load(param_file)
     if json_object == None:
         print("Unable to parse json file")
         exit()
@@ -86,23 +93,22 @@ with open(params) as file, open("results.csv", "w") as csv:
     associativities = json_object["associativity"]
     block_sizes = json_object["blockSize"]
     filenames = glob(f"{trace_files}/*.trc")
+    tasks_to_execute = []
 
-    for file in filenames:
-        for cs in cache_sizes:
-            for assoc in associativities:
-                for bs in block_sizes:
-                    cmd = ["python3",
-                           f"{executable}",
-                           "-f",
-                           f"{file}",
-                           "-s",
-                           f"{cs}",
-                           "-b",
-                           f"{bs}",
-                           "-a",
-                           f"{assoc}",
-                           "-r RND",
-                           f"-p 4194304"]
-                    print(' '.join(cmd))
-                    handle_args(cmd, csv)
-    csv.close()
+    # Generate all combinations of the cache parameters.
+    for file, cs, assoc, bs in product(filenames, cache_sizes, associativities, block_sizes):
+        cmd = ["python3",
+               f"{executable}",
+               "-f",
+               f"{file}",
+               "-s",
+               f"{cs}",
+               "-b",
+               f"{bs}",
+               "-a",
+               f"{assoc}",
+               "-r RND",
+               f"-p 4194304"]
+        tasks_to_execute.append(executor_service.submit(create_line, cmd))
+
+    csv.writelines(map(lambda future: future.result(), as_completed(tasks_to_execute)))
